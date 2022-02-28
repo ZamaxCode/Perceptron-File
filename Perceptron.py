@@ -1,34 +1,59 @@
 import random
-from sys import float_repr_style
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinter import *
+from tkinter.filedialog import askopenfilename
 import numpy as np
 import threading
 
 X = []
 d = []
 
-def charge_data():
+def select_x_file():
     global X, d
 
-    with open('D.txt') as f:
-        lines = f.readlines()
-    for line in lines:
-        d.append(int(line))
+    x_file = askopenfilename()
+    X = []
 
-    with open('X.txt') as f:
+    with open(x_file) as f:
         lines = f.readlines()
 
-    for l in range(len(lines)):
-        vector = lines[l].split(' ')
-        vector[0] = float(vector[0])
-        vector[1] = float(vector[1])
-        if d[l]:
-            ax.plot(vector[0],vector[1],'.g')
-        else:
-            ax.plot(vector[0],vector[1],'.r')
-        X.append(vector)
+    ax.cla()
+    print_axis()
+
+    if len(d) == len(lines):
+        for i in range(len(lines)):
+            vector = lines[i].split(' ')
+            vector[0] = float(vector[0])
+            vector[1] = float(vector[1])
+            if d[i]:
+                ax.plot(vector[0],vector[1],'.g')
+            else:
+                ax.plot(vector[0],vector[1],'.r')
+            X.append(vector)
+        
+        start_button.config(state=NORMAL)
+        canvas.draw()
+    else:
+        print("The number of patterns does not match the number of desired values.")
+    
+
+def select_d_file():
+    global  d
+
+    d_file = askopenfilename()
+    d = []
+    
+    with open(d_file) as f:
+        lines = f.readlines()
+    if len(lines) > 0:
+        for line in lines:
+            d.append(int(line))
+        x_file_button.config(state=NORMAL)
+        print("The 'd' file has been loaded.")
+    else:
+        print("The 'd' file is empty.")
+    
 
 def print_axis():
     global ax
@@ -92,6 +117,21 @@ def print_line():
 
         canvas.draw()
 
+def clean_screen():
+    global X, d
+    X = []
+    d = []
+    ax.cla()
+    print_axis()
+    canvas.draw()
+    w1 = random.random()
+    w2 = random.random()
+    theta = random.random()
+    W1_label.config(text="W1: {:.4f}".format(w1))
+    W2_label.config(text="W2: {:.4f}".format(w2))
+    Theta_label.config(text="Theta: {:.4f}".format(theta))
+    x_file_button.config(state=DISABLED)
+    start_button.config(state=DISABLED)
     
 
 #Inizializamos la grafica de matplotlib
@@ -99,7 +139,6 @@ fig, ax= plt.subplots(facecolor='#8D96DA')
 plt.xlim(-2,2)
 plt.ylim(-2,2)
 print_axis()
-charge_data()
 
 mainwindow = Tk()
 mainwindow.geometry('750x600')
@@ -136,8 +175,17 @@ Epoch_label.place(x=600, y=160)
 Epoch_entry = Entry(mainwindow, textvariable=epoch_inter)
 Epoch_entry.place(x=600, y=180)
 
-start_button = Button(mainwindow, text="Go!", command=lambda:threading.Thread(target=print_line).start())
+start_button = Button(mainwindow, text="Go!", command=lambda:threading.Thread(target=print_line).start(), state=DISABLED)
 start_button.place(x=600, y=230)
+
+x_file_button = Button(mainwindow, text="Select X file", command=select_x_file, state=DISABLED)
+x_file_button.place(x=600, y=260)
+
+d_file_button = Button(mainwindow, text="Select D file", command=select_d_file)
+d_file_button.place(x=600, y=290)
+
+clean_button = Button(mainwindow, text="Clean", command=clean_screen)
+clean_button.place(x=600, y=320)
 
 
 #Mostramos la interfaz
