@@ -7,7 +7,14 @@ import numpy as np
 import threading
 
 X = []
+W = []
 d = []
+e = []
+
+colors = ['#FF0000','#5900FF','#FF8300','#FF00F3','#FBFF00',
+            '#00BDFF','#9BFF00','#00FFFF','#0BB000','#9034A7',
+            '#8C4D09','#B8B1A9','#FFBC95','#7B9363','#35665F',
+            '#0D2F5D','#592795','#D984D1','#545555','#1F6388',]
 
 def select_x_file():
     global X, d
@@ -23,15 +30,10 @@ def select_x_file():
 
     if len(d) == len(lines):
         for i in range(len(lines)):
-            vector = lines[i].split(' ')
-            vector[0] = float(vector[0])
-            vector[1] = float(vector[1])
-            if d[i]:
-                ax.plot(vector[0],vector[1],'.g')
-            else:
-                ax.plot(vector[0],vector[1],'.r')
-            X.append(vector)
-        
+            v = lines[i].split(' ')
+            vector = list(map(float, v))
+            ax.plot(vector[0],vector[1],'.', color=colors[int("".join(str(j) for j in d[i]),2)])
+            X.append([1,vector[0],vector[1]])
         start_button.config(state=NORMAL)
         canvas.draw()
     else:
@@ -39,18 +41,25 @@ def select_x_file():
     
 
 def select_d_file():
-    global  d
+    global  d, W
 
     d_file = askopenfilename()
     d = []
+    W = []
     
     with open(d_file) as f:
         lines = f.readlines()
+
     if len(lines) > 0:
-        for line in lines:
-            d.append(int(line))
+        for i in range(len(lines)):
+            v = lines[i].split(' ')
+            vector = list(map(int, v))
+            d.append(vector)
         x_file_button.config(state=NORMAL)
         print("The 'd' file has been loaded.")
+
+        for i in range(len(d[0])):
+            W.append([random.random(), random.random(), random.random()])
     else:
         print("The 'd' file is empty.")
     
@@ -66,15 +75,8 @@ def print_axis():
     plt.xlim(-5,5)
     plt.ylim(-5,5)
 
-def ActivationFunc():
-    global w1, w2, theta
-    #Generamos el vector F(u) con true y false
-    F_u = np.dot(X,[w1,w2])-theta >= 0
-    #Retornamos f(u), los valores de X, m y b
-    return F_u
-
 def print_line():
-    global w1, w2, theta, eta, epoch_inter, X, d
+    global eta, epoch_inter, X, W, d
 
     epoch = int(epoch_inter.get())
     error = True
@@ -82,71 +84,54 @@ def print_line():
     while epoch and error:
         error = False
         for i in range(len(X)):
-            Y = np.dot(X[i],[w1,w2])-theta >= 0
-            e = d[i]-Y
-            if e != 0:
-                error = True
-                w1 = w1 + (float(eta.get())*e*X[i][0])
-                w2 = w2 + (float(eta.get())*e*X[i][1])
-                theta = theta - (float(eta.get())*e)
+            for j in range(len(W)):
+                Y = np.dot(X[i],[(-W[j][0]),W[j][1],W[j][2]]) >= 0
+                e = d[i][j]-Y
+                if e != 0:
+                    error = True
+                    W[j][1] = W[j][1] + (float(eta.get())*e*X[i][1])
+                    W[j][2] = W[j][2] + (float(eta.get())*e*X[i][2])
+                    W[j][0] = W[j][0] - (float(eta.get())*e*X[i][0])
 
         ax.cla()
 
-        Y=[]
-        m=-w1/w2
-        b=theta/w2
-        Y = ActivationFunc()
+        
         #Imprimimos los puntos en la grafica
         for i in range(len(X)):
-            #Si la funcion f(u) da 1, entonces el punto se imprime de color verde
-            #En caso contrario será rojo
-            if Y[i]:
-                ax.plot(X[i][0],X[i][1],'.g')
-            else:
-                ax.plot(X[i][0],X[i][1],'.r')
+            ax.plot(X[i][1],X[i][2],'.', color=colors[int("".join(str(j) for j in d[i]),2)])
 
-        #Coloca una linea a partir de un punto dado y la pendiente
-        plt.axline((X[0][0], (X[0][0]*m)+b), slope=m, color='b')
-        print_axis()
+        for i in range(len(W)):
+            m=-W[i][1]/W[i][2]
+            b=W[i][0]/W[i][2]
 
-        W1_label.config(text="W1: {:.4f}".format(w1))
-        W2_label.config(text="W2: {:.4f}".format(w2))
-        Theta_label.config(text="Theta: {:.4f}".format(theta))
-          
+            plt.axline((X[0][1], (X[0][1]*m)+b), slope=m, color='k')
+            print_axis()
+        
         epoch-=1
 
         canvas.draw()
 
 def clean_screen():
-    global X, d
+    global X, W, d
     X = []
     d = []
     ax.cla()
     print_axis()
     canvas.draw()
-    w1 = random.random()
-    w2 = random.random()
-    theta = random.random()
-    W1_label.config(text="W1: {:.4f}".format(w1))
-    W2_label.config(text="W2: {:.4f}".format(w2))
-    Theta_label.config(text="Theta: {:.4f}".format(theta))
+    W = [random.random(), random.random(), random.random()]
     x_file_button.config(state=DISABLED)
     start_button.config(state=DISABLED)
     
 
 #Inizializamos la grafica de matplotlib
 fig, ax= plt.subplots(facecolor='#8D96DA')
-plt.xlim(-2,2)
-plt.ylim(-2,2)
 print_axis()
 
 mainwindow = Tk()
 mainwindow.geometry('750x600')
 mainwindow.wm_title('Perceptron')
 #Creamos los valores de los pesos y humbral de activacion 
-w1 = random.random()
-w2 = random.random()
-theta = random.random()
+W = [random.random(), random.random(), random.random()]
 eta = StringVar(mainwindow, 0)
 epoch_inter = StringVar(mainwindow, 0)
 #Colocamos la grafica en la interfaz
@@ -154,14 +139,6 @@ canvas = FigureCanvasTkAgg(fig, master = mainwindow)
 canvas.get_tk_widget().place(x=10, y=10, width=580, height=580)
 
 #Colocamos las etiquetas, cuadros de entrada y boton
-W1_label = Label(mainwindow, text = "W1: {:.4f}".format(w1))
-W1_label.place(x=600, y=20) 
-
-W2_label = Label(mainwindow, text = "W2: {:.4f}".format(w2))
-W2_label.place(x=600, y=50) 
-
-Theta_label = Label(mainwindow, text = "Theta: {:.4f}".format(theta))
-Theta_label.place(x=600, y=80) 
 
 Eta_label = Label(mainwindow, text = "Eta: ")
 Eta_label.place(x=600, y=110)
@@ -186,7 +163,6 @@ d_file_button.place(x=600, y=290)
 
 clean_button = Button(mainwindow, text="Clean", command=clean_screen)
 clean_button.place(x=600, y=320)
-
 
 #Mostramos la interfaz
 mainwindow.mainloop()
