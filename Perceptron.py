@@ -9,7 +9,6 @@ import threading
 X = []
 W = []
 d = []
-e = []
 
 colors = ['#FF0000','#5900FF','#FF8300','#FF00F3','#FBFF00',
             '#00BDFF','#9BFF00','#00FFFF','#0BB000','#9034A7',
@@ -85,27 +84,28 @@ def print_line():
         error = False
         for i in range(len(X)):
             for j in range(len(W)):
-                Y = np.dot(X[i],[(-W[j][0]),W[j][1],W[j][2]]) >= 0
+                Y = np.dot(X[i],W[j]) >= 0
                 e = d[i][j]-Y
                 if e != 0:
                     error = True
                     W[j][1] = W[j][1] + (float(eta.get())*e*X[i][1])
                     W[j][2] = W[j][2] + (float(eta.get())*e*X[i][2])
-                    W[j][0] = W[j][0] - (float(eta.get())*e*X[i][0])
+                    W[j][0] = W[j][0] + (float(eta.get())*e*X[i][0])
 
         ax.cla()
 
         
         #Imprimimos los puntos en la grafica
         for i in range(len(X)):
-            ax.plot(X[i][1],X[i][2],'.', color=colors[int("".join(str(j) for j in d[i]),2)])
+            Y = np.dot(W,X[i]) >= 0
+            ax.plot(X[i][1],X[i][2],'.', color=colors[int("".join(str(j) for j in list(map(int, Y))),2)])
 
         for i in range(len(W)):
             m=-W[i][1]/W[i][2]
-            b=W[i][0]/W[i][2]
+            b=-W[i][0]/W[i][2]
 
-            plt.axline((X[0][1], (X[0][1]*m)+b), slope=m, color='k')
-            print_axis()
+            plt.axline((X[0][1], (X[0][1]*m)+b), slope=m, color='k', linestyle='--')
+        print_axis()
         
         epoch-=1
 
@@ -118,7 +118,7 @@ def clean_screen():
     ax.cla()
     print_axis()
     canvas.draw()
-    W = [random.random(), random.random(), random.random()]
+    W = []
     x_file_button.config(state=DISABLED)
     start_button.config(state=DISABLED)
     
@@ -130,8 +130,6 @@ print_axis()
 mainwindow = Tk()
 mainwindow.geometry('750x600')
 mainwindow.wm_title('Perceptron')
-#Creamos los valores de los pesos y humbral de activacion 
-W = [random.random(), random.random(), random.random()]
 eta = StringVar(mainwindow, 0)
 epoch_inter = StringVar(mainwindow, 0)
 #Colocamos la grafica en la interfaz
