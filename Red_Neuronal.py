@@ -1,4 +1,4 @@
-import random
+from re import I
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinter import *
@@ -7,16 +7,11 @@ import numpy as np
 import threading
 
 X = []
-W = []
+W_hide = []
+W_out = []
 d = []
 
-colors = ['#FF0000','#5900FF','#FF8300','#FF00F3','#FBFF00',
-            '#00BDFF','#9BFF00','#00FFFF','#0BB000','#9034A7',
-            '#8C4D09','#B8B1A9','#FFBC95','#7B9363','#35665F',
-            '#0D2F5D','#592795','#D984D1','#545555','#1F6388',
-            '#FF0000','#5900FF','#FF8300','#FF00F3','#FBFF00',
-            '#00BDFF','#9BFF00','#00FFFF','#0BB000','#9034A7',
-            '#8C4D09','#B8B1A9']
+colors = ['red', 'green']
 
 def select_x_file():
     global X, d
@@ -34,8 +29,9 @@ def select_x_file():
         for i in range(len(lines)):
             v = lines[i].split(' ')
             vector = list(map(float, v))
-            ax.plot(vector[0],vector[1],'.', color=colors[int("".join(str(j) for j in d[i]),2)])
+            ax.plot(vector[0],vector[1],'o', color=colors[d[i]])
             X.append([1,vector[0],vector[1]])
+        X = np.matrix(X)
         start_button.config(state=NORMAL)
         canvas.draw()
     else:
@@ -47,23 +43,24 @@ def select_d_file():
 
     d_file = askopenfilename()
     d = []
-    W = []
     
     with open(d_file) as f:
         lines = f.readlines()
 
     if len(lines) > 0:
         for i in range(len(lines)):
-            v = lines[i].split(' ')
-            vector = list(map(int, v))
-            d.append(vector)
+            d.append(int(lines[i]))
         x_file_button.config(state=NORMAL)
         print("The 'd' file has been loaded.")
-
-        for i in range(len(d[0])):
-            W.append([random.random(), random.random(), random.random()])
+        initializeWeights()
     else:
         print("The 'd' file is empty.")
+
+def initializeWeights():
+    global W_hide
+    global W_out
+    W_hide = np.random.rand(2,3)
+    W_out = np.random.rand(3)
 
 def print_axis():
     global ax
@@ -73,8 +70,8 @@ def print_axis():
     zeros = [0,0]
     ax.plot(ejeX, zeros, 'k')
     ax.plot(zeros, ejeY, 'k')
-    plt.xlim(-5,5)
-    plt.ylim(-5,5)
+    plt.xlim(-1.5,1.5)
+    plt.ylim(-1.5,1.5)
 
 def ActivationFunc(x, w):
     global func_value, a
@@ -111,10 +108,10 @@ def ActivationFuncDerivated(Y):
 
     return F_u
 
-def print_line():
-    global eta, epoch_inter, X, W, d
-
-    epoch = int(epoch_inter.get())
+def dataClasification():
+    global eta_gui, epoch_gui, X, W_hide, W_out, d
+    eta = float(eta_gui.get())
+    epoch = int(epoch_gui.get())
     error = True
     
     d = np.matrix(d)
@@ -123,22 +120,32 @@ def print_line():
 
     while epoch and error:
         error = False
-        errors_matrix = []
-        for i in range(len(X)):
-            errors = []
-            for j in range(len(W)):
-                Y = ActivationFunc(X[i],W[j])
-                e = d[i,j]-Y
-                errors.append(e)
-                y_prima = ActivationFuncDerivated(Y)
-                W[j] = W[j] + (np.dot(float(eta.get())*e*y_prima,X[i]))
-            errors_matrix.append(errors)
-        ax.cla()
+        salida_oculta = []
+        for w in W_hide:
+            s_hide = ActivationFunc(np.transpose(X),w)
+            salida_oculta.append(np.transpose(s_hide))
+        salida = []
+        for s in salida_oculta:
+            salida.append(np.transpose(ActivationFunc(W_out, np.transpose(s))))
 
-        square_matrix =  np.power(errors_matrix,2)
-        average = square_matrix.mean(0)
-        for a in average:
-            if a > float(min_error.get()):
+        errors = d - salida
+#-----------------------------------------------------------------------------------------------------------
+        #capa salida
+        y_derivated = ActivationFuncDerivated(salida)
+        delta_out = np.dot(y_derivated, e)
+        W_out = W_out + np.dot(eta, np.dot(delta_out,salida_oculta))
+
+        #capa oculta
+
+        for i in range(len(W_hide)):
+            y_derivated = ActivationFuncDerivated(X, W_hide[i])
+            delta_hide = y_derivated * delta_out[i] * salida_oculta[i]
+            W_hide[i] = W_hide[i] + np.dot(X, eta*delta_hide)
+        ax.cla()
+#----------------------------------------------------------------------------------------------------------
+        square_error =  np.average(np.power(errors,2))
+        for e in square_error:
+            if e > float(min_error.get()):
                 error = True
         
         min_accepted = 0
@@ -146,20 +153,15 @@ def print_line():
             min_accepted = 0.5
 
         #Imprimimos los puntos en la grafica
-        for i in range(len(X)):
-            Y = ActivationFunc(X[i], W) >= min_accepted
-            ax.plot(X[i][1],X[i][2],'.', color=colors[int("".join(str(j) for j in list(map(int, Y))),2)])
-
-        for i in range(len(W)):
-            m=-W[i][1]/W[i][2]
-            b=-W[i][0]/W[i][2]
-
-            plt.axline((X[0][1], (X[0][1]*m)+b), slope=m, color='k', linestyle='--')
-        plt.xlim(-5,5)
-        plt.ylim(-5,5)
-        
+        salida_oculta = ActivationFunc(X,W_hide)
+        salida = ActivationFunc(salida_oculta, W_out)
+        for s in salida:
+            if s >= min_accepted:
+                ax.plot(X[i][1],X[i][2],'o', color='green')
+            else:
+                ax.plot(X[i][1],X[i][2],'o', color='red')
         epoch-=1
-
+        print_axis()
         canvas.draw()
 
 def clean_screen():
@@ -181,8 +183,8 @@ print_axis()
 mainwindow = Tk()
 mainwindow.geometry('750x600')
 mainwindow.wm_title('Perceptron')
-eta = StringVar(mainwindow, 0)
-epoch_inter = StringVar(mainwindow, 0)
+eta_gui = StringVar(mainwindow, 0)
+epoch_gui = StringVar(mainwindow, 0)
 a = StringVar(mainwindow, 0)
 min_error = StringVar(mainwindow, 0)
 func_value = IntVar(mainwindow, 0)
@@ -198,12 +200,12 @@ a_entry.place(x=600, y=80)
 
 Eta_label = Label(mainwindow, text = "Eta: ")
 Eta_label.place(x=600, y=110)
-Eta_entry = Entry(mainwindow, textvariable=eta)
+Eta_entry = Entry(mainwindow, textvariable=eta_gui)
 Eta_entry.place(x=600, y=130) 
 
 Epoch_label = Label(mainwindow, text = "Num. Epoch: ")
 Epoch_label.place(x=600, y=160)
-Epoch_entry = Entry(mainwindow, textvariable=epoch_inter)
+Epoch_entry = Entry(mainwindow, textvariable=epoch_gui)
 Epoch_entry.place(x=600, y=180)
 
 error_label = Label(mainwindow, text = "Min. Error: ")
@@ -211,7 +213,7 @@ error_label.place(x=600, y=210)
 error_entry = Entry(mainwindow, textvariable=min_error)
 error_entry.place(x=600, y=230)
 
-start_button = Button(mainwindow, text="Go!", command=lambda:threading.Thread(target=print_line).start(), state=DISABLED)
+start_button = Button(mainwindow, text="Go!", command=lambda:threading.Thread(target=dataClasification).start(), state=DISABLED)
 start_button.place(x=600, y=260)
 
 x_file_button = Button(mainwindow, text="Select X file", command=select_x_file, state=DISABLED)
