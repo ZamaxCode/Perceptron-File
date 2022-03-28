@@ -74,37 +74,39 @@ def print_axis():
     plt.ylim(-1.5,1.5)
 
 def ActivationFunc(x, w):
-    global func_value, a
+    global func_value, a_gui
+    a = float(a_gui.get())
 
-    v = np.dot(w,x)
+    v = np.dot(x,w)
 
     if func_value.get() == 0:
         #Logistica
-        F_u = 1/(1+np.exp(-(float(a.get()))*v))
+        F_u = 1/(1+np.exp(-a*v))
 
     elif func_value.get() == 1:
         #Tangente hiperbolica
-        F_u = float(a.get())*(np.tanh(v))
+        F_u = a*(np.tanh(v))
     
     elif func_value.get() == 2:
         #Lineal
-        F_u = float(a.get())*v
+        F_u = a*v
 
     return F_u
 
 def ActivationFuncDerivated(Y):
-    global func_value, a
+    global func_value, a_gui
+    a = float(a_gui.get())
 
     if func_value.get() == 0:
         #Logistica
-        F_u = float(a.get())*Y*(1-Y)
+        F_u = np.dot(a*Y,(1-Y))
 
     elif func_value.get() == 1:
         #Tangente hiperbolica
-        F_u = float(a.get())*(1-(Y**2))
+        F_u = a*(1-(np.square(Y),2))
     elif func_value.get() == 2:
         #Lineal
-        F_u = float(a.get())
+        F_u = a
 
     return F_u
 
@@ -120,29 +122,25 @@ def dataClasification():
 
     while epoch and error:
         error = False
-        salida_oculta = []
-        for w in W_hide:
-            s_hide = ActivationFunc(np.transpose(X),w)
-            salida_oculta.append(np.transpose(s_hide))
-        salida = []
-        for s in salida_oculta:
-            salida.append(np.transpose(ActivationFunc(W_out, np.transpose(s))))
-
+        
+        salida_oculta = ActivationFunc(X, np.transpose(W_hide))
+        salida_oculta = np.c_[np.ones(4),salida_oculta]
+        salida = ActivationFunc(salida_oculta, W_out)
         errors = d - salida
 #-----------------------------------------------------------------------------------------------------------
         #capa salida
-        y_derivated = ActivationFuncDerivated(salida)
+        y_derivated = []
+        y_derivated.append(ActivationFuncDerivated(s))
         delta_out = np.dot(y_derivated, e)
         W_out = W_out + np.dot(eta, np.dot(delta_out,salida_oculta))
 
         #capa oculta
-
         for i in range(len(W_hide)):
-            y_derivated = ActivationFuncDerivated(X, W_hide[i])
+            y_derivated = ActivationFuncDerivated(salida_oculta[i])
             delta_hide = y_derivated * delta_out[i] * salida_oculta[i]
             W_hide[i] = W_hide[i] + np.dot(X, eta*delta_hide)
         ax.cla()
-#----------------------------------------------------------------------------------------------------------
+#---------------------------------------------------------------------------------------------------------
         square_error =  np.average(np.power(errors,2))
         for e in square_error:
             if e > float(min_error.get()):
@@ -185,7 +183,7 @@ mainwindow.geometry('750x600')
 mainwindow.wm_title('Perceptron')
 eta_gui = StringVar(mainwindow, 0)
 epoch_gui = StringVar(mainwindow, 0)
-a = StringVar(mainwindow, 0)
+a_gui = StringVar(mainwindow, 0)
 min_error = StringVar(mainwindow, 0)
 func_value = IntVar(mainwindow, 0)
 #Colocamos la grafica en la interfaz
@@ -195,7 +193,7 @@ canvas.get_tk_widget().place(x=10, y=10, width=580, height=580)
 #Colocamos las etiquetas, cuadros de entrada y boton
 a_label = Label(mainwindow, text = "A: ")
 a_label.place(x=600, y=60)
-a_entry = Entry(mainwindow, textvariable=a)
+a_entry = Entry(mainwindow, textvariable=a_gui)
 a_entry.place(x=600, y=80)
 
 Eta_label = Label(mainwindow, text = "Eta: ")
