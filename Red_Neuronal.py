@@ -99,11 +99,11 @@ def ActivationFuncDerivated(Y):
 
     if func_value.get() == 0:
         #Logistica
-        F_u = np.dot(a*Y,(1-Y))
+        F_u = a*Y*(1-Y)
 
     elif func_value.get() == 1:
         #Tangente hiperbolica
-        F_u = a*(1-(np.square(Y),2))
+        F_u = a*(1-Y**2)
     elif func_value.get() == 2:
         #Lineal
         F_u = a
@@ -116,34 +116,41 @@ def dataClasification():
     epoch = int(epoch_gui.get())
     error = True
     
-    d = np.matrix(d)
+    d = np.array(d)
     if func_value.get() != 0:
-        d[d==0]=(-1)
+        np.where(d==0, -1, d)
 
     while epoch and error:
         error = False
         
         salida_oculta = ActivationFunc(X, np.transpose(W_hide))
-        salida_oculta = np.c_[np.ones(4),salida_oculta]
-        salida = ActivationFunc(salida_oculta, W_out)
+        X_hide = np.c_[np.ones(4),salida_oculta]
+        salida = ActivationFunc(X_hide, np.array(W_out).flatten())
         errors = d - salida
+        print(errors)
+
 #-----------------------------------------------------------------------------------------------------------
         #capa salida
-        y_derivated = []
-        y_derivated.append(ActivationFuncDerivated(s))
-        delta_out = np.dot(y_derivated, e)
-        W_out = W_out + np.dot(eta, np.dot(delta_out,salida_oculta))
+        delta_out = []
+        for i in range(len(X_hide)):
+            salida_der = ActivationFuncDerivated(np.array(salida).flatten()[i])
+            delta_out.append(salida_der-np.array(errors).flatten()[i])
+            W_out = W_out + np.dot(X_hide[i],eta*delta_out[-1])
 
         #capa oculta
-        for i in range(len(W_hide)):
-            y_derivated = ActivationFuncDerivated(salida_oculta[i])
-            delta_hide = y_derivated * delta_out[i] * salida_oculta[i]
-            W_hide[i] = W_hide[i] + np.dot(X, eta*delta_hide)
+        for i in range(len(X)):
+            for j in range(len(W_hide)):
+                salida_der = ActivationFuncDerivated(salida_oculta[i,j])
+                delta_hide = np.dot(salida_der, np.dot(W_out,np.array(delta_out).flatten()[i]))
+                W_hide = W_hide + np.multiply(X[i],np.dot(eta,delta_hide))
+
+        
+
+
         ax.cla()
 #---------------------------------------------------------------------------------------------------------
         square_error =  np.average(np.power(errors,2))
-        for e in square_error:
-            if e > float(min_error.get()):
+        if square_error > float(min_error.get()):
                 error = True
         
         min_accepted = 0
@@ -151,13 +158,19 @@ def dataClasification():
             min_accepted = 0.5
 
         #Imprimimos los puntos en la grafica
-        salida_oculta = ActivationFunc(X,W_hide)
-        salida = ActivationFunc(salida_oculta, W_out)
-        for s in salida:
-            if s >= min_accepted:
-                ax.plot(X[i][1],X[i][2],'o', color='green')
+        salida_oculta = ActivationFunc(X, np.transpose(W_hide))
+        X_hide = np.c_[np.ones(4),salida_oculta]
+        salida = ActivationFunc(X_hide, np.array(W_out).flatten())
+
+        for i in range(len(np.array(salida).flatten())):
+            if np.array(salida).flatten()[i] >= min_accepted:
+                ax.plot(X[i,1],X[i,2],'o', color='green')
             else:
-                ax.plot(X[i][1],X[i][2],'o', color='red')
+                ax.plot(X[i,1],X[i,2],'o', color='red')
+
+        print(W_hide)
+        print(W_out)
+        print("-------------------------")
         epoch-=1
         print_axis()
         canvas.draw()
