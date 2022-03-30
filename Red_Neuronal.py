@@ -176,16 +176,13 @@ def dataClasification():
 
         Z_m = []
         for i in range(len(X_m)):
-            z_v = []
-            for j in range(len(X_m[i])):
-                salida_oculta = ActivationFunc(np.transpose([1,X_m[i,j],Y_m[i,j]]), np.transpose(W_hide))
-                X_hide = np.c_[np.ones(len(salida_oculta)),salida_oculta]
-                salida = ActivationFunc(X_hide, np.array(W_out).flatten())
-                z_v.append(salida[0,0])
-            Z_m.append(z_v)
+            X_c = np.transpose([X_m[i],Y_m[i]])
+            X_c = np.c_[np.ones(len(X_c)),X_c]
+            salida_oculta = ActivationFunc(X_c, np.transpose(W_hide))
+            X_hide = np.c_[np.ones(len(salida_oculta)),salida_oculta]
+            salida = ActivationFunc(X_hide, np.array(W_out).flatten())
+            Z_m.append(np.array(salida).flatten())
         ax.contourf(X_m, Y_m, Z_m, 0)
-
-
 
 #---------------------------------------------------------------------------------------------------------
         epoch-=1
