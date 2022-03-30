@@ -1,4 +1,3 @@
-from re import I
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinter import *
@@ -167,6 +166,28 @@ def dataClasification():
         
         print(square_error)
         print("----------------",epoch,"-------------")
+
+#---------------------------------------------------------------------------------------------------------
+
+        x_v = np.linspace(-1.5, 1.5, 10)
+        y_v = np.linspace(-1.5, 1.5, 10)
+
+        X_m, Y_m = np.meshgrid(x_v, y_v)
+
+        Z_m = []
+        for i in range(len(X_m)):
+            z_v = []
+            for j in range(len(X_m[i])):
+                salida_oculta = ActivationFunc(np.transpose([1,X_m[i,j],Y_m[i,j]]), np.transpose(W_hide))
+                X_hide = np.c_[np.ones(len(salida_oculta)),salida_oculta]
+                salida = ActivationFunc(X_hide, np.array(W_out).flatten())
+                z_v.append(salida[0,0])
+            Z_m.append(z_v)
+        ax.contourf(X_m, Y_m, Z_m, 0)
+
+
+
+#---------------------------------------------------------------------------------------------------------
         epoch-=1
         print_axis()
         canvas.draw()
