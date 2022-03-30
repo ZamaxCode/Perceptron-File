@@ -59,7 +59,7 @@ def select_d_file():
 def initializeWeights():
     global W_hide
     global W_out
-    W_hide = np.random.rand(2,3)
+    W_hide = np.matrix(np.random.rand(2,3))
     W_out = np.random.rand(3)
 
 def print_axis():
@@ -124,27 +124,24 @@ def dataClasification():
         error = False
         
         salida_oculta = ActivationFunc(X, np.transpose(W_hide))
-        X_hide = np.c_[np.ones(4),salida_oculta]
+        X_hide = np.c_[np.ones(len(salida_oculta)),salida_oculta]
         salida = ActivationFunc(X_hide, np.array(W_out).flatten())
         errors = d - salida
-        print(errors)
 
 #-----------------------------------------------------------------------------------------------------------
         #capa salida
         delta_out = []
         for i in range(len(X_hide)):
             salida_der = ActivationFuncDerivated(np.array(salida).flatten()[i])
-            delta_out.append(salida_der-np.array(errors).flatten()[i])
+            delta_out.append(salida_der*np.array(errors).flatten()[i])
             W_out = W_out + np.dot(X_hide[i],eta*delta_out[-1])
 
         #capa oculta
         for i in range(len(X)):
             for j in range(len(W_hide)):
                 salida_der = ActivationFuncDerivated(salida_oculta[i,j])
-                delta_hide = np.dot(salida_der, np.dot(W_out,np.array(delta_out).flatten()[i]))
-                W_hide = W_hide + np.multiply(X[i],np.dot(eta,delta_hide))
-
-        
+                delta_hide = np.array(W_out).flatten()[j+1]*np.array(delta_out).flatten()[i]*salida_der
+                W_hide[j] = W_hide[j] + np.dot(X[i],eta*delta_hide)
 
 
         ax.cla()
@@ -159,7 +156,7 @@ def dataClasification():
 
         #Imprimimos los puntos en la grafica
         salida_oculta = ActivationFunc(X, np.transpose(W_hide))
-        X_hide = np.c_[np.ones(4),salida_oculta]
+        X_hide = np.c_[np.ones(len(salida_oculta)),salida_oculta]
         salida = ActivationFunc(X_hide, np.array(W_out).flatten())
 
         for i in range(len(np.array(salida).flatten())):
@@ -167,10 +164,9 @@ def dataClasification():
                 ax.plot(X[i,1],X[i,2],'o', color='green')
             else:
                 ax.plot(X[i,1],X[i,2],'o', color='red')
-
-        print(W_hide)
-        print(W_out)
-        print("-------------------------")
+        
+        print(square_error)
+        print("----------------",epoch,"-------------")
         epoch-=1
         print_axis()
         canvas.draw()
