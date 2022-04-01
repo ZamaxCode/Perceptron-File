@@ -1,3 +1,4 @@
+import time
 import matplotlib.pyplot as plt
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from tkinter import *
@@ -52,6 +53,7 @@ def select_d_file():
         x_file_button.config(state=NORMAL)
         print("The 'd' file has been loaded.")
         initializeWeights()
+        d = np.array(d)
     else:
         print("The 'd' file is empty.")
 
@@ -102,7 +104,8 @@ def ActivationFuncDerivated(Y):
 
     elif func_value.get() == 1:
         #Tangente hiperbolica
-        F_u = a*(1-Y**2)
+        F_u = a*(1-(Y**2))
+
     elif func_value.get() == 2:
         #Lineal
         F_u = a
@@ -114,14 +117,10 @@ def dataClasification():
     eta = float(eta_gui.get())
     epoch = int(epoch_gui.get())
     error = True
-    
-    d = np.array(d)
-    if func_value.get() != 0:
-        np.where(d==0, -1, d)
 
     while epoch and error:
         error = False
-        
+
         salida_oculta = ActivationFunc(X, np.transpose(W_hide))
         X_hide = np.c_[np.ones(len(salida_oculta)),salida_oculta]
         salida = ActivationFunc(X_hide, np.array(W_out).flatten())
@@ -142,16 +141,11 @@ def dataClasification():
                 delta_hide = np.array(W_out).flatten()[j+1]*np.array(delta_out).flatten()[i]*salida_der
                 W_hide[j] = W_hide[j] + np.dot(X[i],eta*delta_hide)
 
-
         ax.cla()
 #---------------------------------------------------------------------------------------------------------
         square_error =  np.average(np.power(errors,2))
         if square_error > float(min_error.get()):
-                error = True
-        
-        min_accepted = 0
-        if func_value.get() == 0:
-            min_accepted = 0.5
+            error = True
 
         #Imprimimos los puntos en la grafica
         salida_oculta = ActivationFunc(X, np.transpose(W_hide))
@@ -159,18 +153,18 @@ def dataClasification():
         salida = ActivationFunc(X_hide, np.array(W_out).flatten())
 
         for i in range(len(np.array(salida).flatten())):
-            if np.array(salida).flatten()[i] >= min_accepted:
+            if np.array(salida).flatten()[i] >= 0.5:
                 ax.plot(X[i,1],X[i,2],'o', color='green')
             else:
                 ax.plot(X[i,1],X[i,2],'o', color='red')
-        
+
         print(square_error)
         print("----------------",epoch,"-------------")
 
 #---------------------------------------------------------------------------------------------------------
 
-        x_v = np.linspace(-1.5, 1.5, 10)
-        y_v = np.linspace(-1.5, 1.5, 10)
+        x_v = np.linspace(-1.5, 1.5, 20)
+        y_v = np.linspace(-1.5, 1.5, 20)
 
         X_m, Y_m = np.meshgrid(x_v, y_v)
 
