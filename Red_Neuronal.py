@@ -21,11 +21,11 @@ def select_x_file():
 
     if len(d) == len(lines):
         for i in range(len(lines)):
-            v = lines[i].split(' ')
-            vector = list(map(float, v))
-            ax.plot(vector[0],vector[1],'o', color=colors[d[i]])
-            X.append([1,vector[0],vector[1]])
+            X.append([1,float(lines[i])])
         X = np.matrix(X)
+
+        ax.plot(np.array(X[:,1]),d, 'o', color="black")
+        
         start_button.config(state=NORMAL)
         canvas.draw()
     else:
@@ -44,18 +44,30 @@ def select_d_file():
 
     if len(lines) > 0:
         for i in range(len(lines)):
-            d.append(int(lines[i]))
+            d.append(float(lines[i]))
         x_file_button.config(state=NORMAL)
         print("The 'd' file has been loaded.")
         d = np.array(d)
     else:
         print("The 'd' file is empty.")
 
+def select_training_data(x_compleat, d_compleat):
+    i=0
+    x_train = []
+    d_train = []
+    while i < len(x_compleat):
+        x_train.append([x_compleat[i,0],x_compleat[i,1]])
+        d_train.append(d_compleat[i])
+        i+=3
+    x_train = np.matrix(x_train)
+    d_train = np.array(d_train)
+    return x_train, d_train
+
 #---------------------------------------------------------------------------------------------------------
 #Inicializar los pesos de las neuronas en funcion a cuantas neuronas haya
 def initializeWeights():
     global W_hide, W_out, num_neurons
-    W_hide = np.matrix(np.random.rand(num_neurons.get(),3))
+    W_hide = np.matrix(np.random.rand(num_neurons.get(),2))
     W_out = np.random.rand(num_neurons.get()+1)
 
 #---------------------------------------------------------------------------------------------------------
@@ -92,21 +104,21 @@ def clean_screen():
 
 #---------------------------------------------------------------------------------------------------------
 #Funcion de activacion
-def ActivationFunc(x, w):
-    global func_value, a_gui
+def ActivationFunc(x, w, func):
+    global a_gui
     a = float(a_gui.get())
 
     v = np.dot(x,w)
 
-    if func_value.get() == 0:
+    if func == 0:
         #Logistica
         F_u = 1/(1+np.exp(-a*v))
 
-    elif func_value.get() == 1:
+    elif func == 1:
         #Tangente hiperbolica
-        F_u = a*(np.tanh(v))
+        F_u = np.tanh(v)
     
-    elif func_value.get() == 2:
+    elif func == 2:
         #Lineal
         F_u = a*v
 
@@ -114,19 +126,19 @@ def ActivationFunc(x, w):
 
 #---------------------------------------------------------------------------------------------------------
 #Funcion de activacion derevada
-def ActivationFuncDerivated(Y):
-    global func_value, a_gui
+def ActivationFuncDerivated(Y, func):
+    global a_gui
     a = float(a_gui.get())
 
-    if func_value.get() == 0:
+    if func == 0:
         #Logistica
         F_u = a*Y*(1-Y)
 
-    elif func_value.get() == 1:
+    elif func == 1:
         #Tangente hiperbolica
-        F_u = a*(1-(Y**2))
+        F_u = 1-(Y**2)
 
-    elif func_value.get() == 2:
+    elif func == 2:
         #Lineal
         F_u = a
 
@@ -135,33 +147,40 @@ def ActivationFuncDerivated(Y):
 #---------------------------------------------------------------------------------------------------------
 #Clasificar datos
 def dataClasification():
-    global eta_gui, epoch_gui, X, W_hide, W_out, d
+    global eta_gui, epoch_gui, X, W_hide, W_out, d, func_value
     eta = float(eta_gui.get())
     epoch = int(epoch_gui.get())
     epoch_cont = 0
     error = True
     error_graph = []
     initializeWeights()
+    func = func_value.get()
+    linear = 2
+
+    X_compleat = X
+    d_compleat = d
+    X, d = select_training_data(X, d)
+    print(X,d)
 
     while epoch and error:
         error = False
-
-        salida_oculta = ActivationFunc(X, np.transpose(W_hide))
+        
+        salida_oculta = ActivationFunc(X, np.transpose(W_hide), func)
         X_hide = np.c_[np.ones(len(salida_oculta)),salida_oculta]
-        salida = ActivationFunc(X_hide, np.array(W_out).flatten())
+        salida = ActivationFunc(X_hide, np.array(W_out).flatten(), linear)
         errors = d - salida
 
         #capa salida
         delta_out = []
         for i in range(len(X_hide)):
-            salida_der = ActivationFuncDerivated(np.array(salida).flatten()[i])
+            salida_der = ActivationFuncDerivated(np.array(salida).flatten()[i], linear)
             delta_out.append(salida_der*np.array(errors).flatten()[i])
             W_out = W_out + np.dot(X_hide[i],eta*delta_out[-1])
 
         #capa oculta
         for i in range(len(X)):
             for j in range(len(W_hide)):
-                salida_der = ActivationFuncDerivated(salida_oculta[i,j])
+                salida_der = ActivationFuncDerivated(salida_oculta[i,j], func)
                 delta_hide = np.array(W_out).flatten()[j+1]*np.array(delta_out).flatten()[i]*salida_der
                 W_hide[j] = W_hide[j] + np.dot(X[i],eta*delta_hide)
 
@@ -173,31 +192,13 @@ def dataClasification():
         error_graph.append(square_error)
 
         #Imprimimos los puntos en la grafica
-        salida_oculta = ActivationFunc(X, np.transpose(W_hide))
+        salida_oculta = ActivationFunc(X, np.transpose(W_hide), func)
         X_hide = np.c_[np.ones(len(salida_oculta)),salida_oculta]
-        salida = ActivationFunc(X_hide, np.array(W_out).flatten())
+        salida = ActivationFunc(X_hide, np.array(W_out).flatten(), linear)
 
-        for i in range(len(np.array(salida).flatten())):
-            if np.array(salida).flatten()[i] >= 0.5:
-                ax.plot(X[i,1],X[i,2],'o', color='green')
-            else:
-                ax.plot(X[i,1],X[i,2],'o', color='red')
-
-        x_v = np.linspace(-1.5, 1.5, 20)
-        y_v = np.linspace(-1.5, 1.5, 20)
-
-        X_m, Y_m = np.meshgrid(x_v, y_v)
-
-        Z_m = []
-        for i in range(len(X_m)):
-            X_c = np.transpose([X_m[i],Y_m[i]])
-            X_c = np.c_[np.ones(len(X_c)),X_c]
-            salida_oculta = ActivationFunc(X_c, np.transpose(W_hide))
-            X_hide = np.c_[np.ones(len(salida_oculta)),salida_oculta]
-            salida = ActivationFunc(X_hide, np.array(W_out).flatten())
-            Z_m.append(np.array(salida).flatten())
-        ax.contourf(X_m, Y_m, Z_m, 0)
-
+        ax.plot(np.array(X_compleat[:,1]),d_compleat, 'o', color="black")
+        ax.plot(np.array(X[:,1]),np.array(salida).flatten(), '--', color="red")
+ 
         ax_e.cla()
         ax_e.plot(error_graph)
         ax_e.set_xticklabels([])
