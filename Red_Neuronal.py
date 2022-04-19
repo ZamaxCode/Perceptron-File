@@ -58,7 +58,7 @@ def select_training_data(x_compleat, d_compleat):
     while i < len(x_compleat):
         x_train.append([x_compleat[i,0],x_compleat[i,1]])
         d_train.append(d_compleat[i])
-        i+=3
+        i+=5
     x_train = np.matrix(x_train)
     d_train = np.array(d_train)
     return x_train, d_train
@@ -192,12 +192,13 @@ def dataClasification():
         error_graph.append(square_error)
 
         #Imprimimos los puntos en la grafica
-        salida_oculta = ActivationFunc(X, np.transpose(W_hide), func)
+        salida_oculta = ActivationFunc(X_compleat, np.transpose(W_hide), func)
         X_hide = np.c_[np.ones(len(salida_oculta)),salida_oculta]
         salida = ActivationFunc(X_hide, np.array(W_out).flatten(), linear)
 
         ax.plot(np.array(X_compleat[:,1]),d_compleat, 'o', color="black")
-        ax.plot(np.array(X[:,1]),np.array(salida).flatten(), '--', color="red")
+        ax.plot(np.array(X[:,1]),np.array(d).flatten(), 'o', color="green")
+        ax.plot(np.array(X_compleat[:,1]),np.array(salida).flatten(), '--', color="red")
  
         ax_e.cla()
         ax_e.plot(error_graph)
